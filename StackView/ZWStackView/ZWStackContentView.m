@@ -10,9 +10,6 @@
 #import "ZWStackCardView.h"
 #import "UIView+Extension.h"
 
-#define kMain_HEIGTH [UIScreen mainScreen].bounds.size.height
-#define kMain_WIDTH [UIScreen mainScreen].bounds.size.width
-
 #define OFFSETY 28
 
 @interface ZWStackContentView()<UIScrollViewDelegate,ZWStackCardViewDelegate>
@@ -23,12 +20,13 @@
 // 存储card
 @property (nonatomic, strong) NSMutableArray<ZWStackCardView *> *cardList;
 
-@property (nonatomic, assign) NSInteger countOfCard;
-
-@property (nonatomic, assign) Boolean IsMaxDargging;
 @end
 
 @implementation ZWStackContentView
+{
+    Boolean IsMaxDarg;
+    NSInteger countOfCard;
+}
 
 
 - (instancetype)initWithFrame:(CGRect)frame{
@@ -46,7 +44,7 @@
     _scrollView.delegate = self;
     [self addSubview:_scrollView];
     
-    _contentView = [[UIView alloc] initWithFrame:CGRectMake(0, OFFSETY, self.width, self.height - 50)];
+    _contentView = [[UIView alloc] initWithFrame:CGRectMake(0, OFFSETY, self.width, self.height - OFFSETY)];
     _contentView.backgroundColor = [UIColor blackColor];
     self.scrollView.contentSize = CGSizeMake(self.width, self.height + OFFSETY);
     self.scrollView.contentOffset = CGPointMake(0, OFFSETY);
@@ -62,10 +60,10 @@
     //获取到拖拽的速度（ >0 向下拖动 <0 向上拖动  =0停止拖拽）
     CGFloat velocity = [pan velocityInView:scrollView].y;
     if (velocity < -5.0) { //向上拖动
-        _IsMaxDargging = NO;
+        IsMaxDarg = NO;
         [self updateLayout];
     } else if (velocity > 5.0) { //向下拖拽
-        if (_IsMaxDargging) {
+        if (IsMaxDarg) {
             return;
         }
         CGFloat offH = OFFSETY - scrollView.contentOffset.y;
@@ -73,7 +71,7 @@
             return;
         } else if ( offH > OFFSETY ) { // scrollview弹簧效果超过最大偏移时
             offH = OFFSETY;
-            _IsMaxDargging = YES;
+            IsMaxDarg = YES;
         }
         [self updateLayoutWhenDidScrollAtContentOffset:offH];
     }
@@ -82,48 +80,51 @@
 - (void)updateLayoutWhenDidScrollAtContentOffset:(CGFloat)offH {
     
     CGFloat sc = 55;
-    [_cardList enumerateObjectsUsingBlock:^(UIView *card, NSUInteger idx, BOOL *stop) {
+    
+    for (int i = 0; i<countOfCard; i++) {
+        UIView *card = _cardList[i];
         
-        CGFloat positionY = sc * idx * offH/OFFSETY;
+        CGFloat positionY = sc * i * offH/OFFSETY;
         
-        CGFloat scale = 1 - 0.03 * (self.countOfCard - idx);
+        CGFloat scale = 1 - 0.03 * (countOfCard - i);
         [UIView animateWithDuration:0.3 animations:^{
             card.alpha = 1;
             card.layer.transform = CATransform3DMakeScale(scale, scale, 1);
             card.y = positionY;
         }];
-        
-    }];
+    }
 }
 
 // 更新scrollView - ContentSize
 - (void)updateLayout {
     [self.scrollView setContentOffset:CGPointMake(0, OFFSETY) animated:YES];
-    [_cardList enumerateObjectsUsingBlock:^(UIView * card, NSUInteger idx, BOOL *stop) {
-        
-        CGFloat positionY = OFFSETY * idx ;
-        CGFloat alpha = 1 - 0.08 * (self.countOfCard - idx - 1);
-        CGFloat scale = 1 - 0.08 * (self.countOfCard - idx - 1);
+    
+    for (int i = 0; i<countOfCard; i++) {
+        UIView *card = _cardList[i];
+        CGFloat positionY = OFFSETY * i ;
+        CGFloat alpha = 1 - 0.08 * (countOfCard - i - 1);
+        CGFloat scale = 1 - 0.08 * (countOfCard - i - 1);
         [UIView animateWithDuration:0.2 animations:^{
-
+            
             card.alpha = alpha;
             card.layer.transform = CATransform3DMakeScale(scale, scale, 1);
             card.y = positionY;
         }];
         
-    }];
+    }
+    
 }
 
 - (void)addNewCardView:(ZWStackCardView *)cardView {
     self.scrollView.contentOffset = CGPointMake(0, OFFSETY);
-    cardView.frame = CGRectMake(0, 500, kMain_WIDTH, 500);
+    cardView.frame = CGRectMake(0, 500, self.width, 500);
     
     [UIView animateWithDuration:0.5 animations:^{
         cardView.y = 0;
     }];
     [self.contentView addSubview:cardView];
-    cardView.index = _countOfCard;
-    _countOfCard += 1;
+    cardView.index = countOfCard;
+    countOfCard += 1;
     cardView.delegate = self;
   
     [self.cardList addObject:cardView];
@@ -135,13 +136,13 @@
     UIView *card = [_cardList lastObject];
     
     [UIView animateWithDuration:0.8 animations:^{
-        card.y = kMain_HEIGTH;
+        card.y = 500;
         card.alpha = 0.2;
     } completion:^(BOOL finished) {
         [card removeFromSuperview];
     }];
     
-    self.countOfCard -= 1;
+    countOfCard -= 1;
     [self.cardList removeLastObject];
     
     [self updateLayout];
@@ -149,7 +150,7 @@
 
 // 指定哪张卡到最上面
 - (void)cardViewBecomeUppermostWith:(NSInteger)index {
-    for (NSUInteger i = index+1; i<_countOfCard; i++) {
+    for (NSUInteger i = index+1; i<countOfCard; i++) {
         ZWStackCardView *card = [_cardList objectAtIndex:i];
         [UIView animateWithDuration:0.5 animations:^{
             card.y = 300;
@@ -158,8 +159,8 @@
             [card removeFromSuperview];
         }];
     }
-    [_cardList removeObjectsInRange:NSMakeRange(index+1, _countOfCard - index -1)];
-    _countOfCard = _cardList.count;
+    [_cardList removeObjectsInRange:NSMakeRange(index+1, countOfCard - index -1)];
+    countOfCard = _cardList.count;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [self updateLayout];
     });
