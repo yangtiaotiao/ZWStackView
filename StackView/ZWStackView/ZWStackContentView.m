@@ -63,29 +63,18 @@
         IsMaxDarg = NO;
         [self updateLayout];
     } else if (velocity > 5.0) { //向下拖拽
-        if (IsMaxDarg) {
-            return;
-        }
-        CGFloat offH = OFFSETY - scrollView.contentOffset.y;
-        if (offH < 10.0 ) { // 拖动偏移过小不执行动画
-            return;
-        } else if ( offH > OFFSETY ) { // scrollview弹簧效果超过最大偏移时
-            offH = OFFSETY;
-            IsMaxDarg = YES;
-        }
-        [self updateLayoutWhenDidScrollAtContentOffset:offH];
+      
+    [self updateLayoutWhenDidScrollDown];
     }
 }
 
-- (void)updateLayoutWhenDidScrollAtContentOffset:(CGFloat)offH {
+- (void)updateLayoutWhenDidScrollDown {
     
     CGFloat sc = 55;
     
     for (int i = 0; i<countOfCard; i++) {
         UIView *card = _cardList[i];
-        
-        CGFloat positionY = sc * i * offH/OFFSETY;
-        
+        CGFloat positionY = sc * i;
         CGFloat scale = 1 - 0.03 * (countOfCard - i);
         [UIView animateWithDuration:0.3 animations:^{
             card.alpha = 1;
